@@ -3,10 +3,6 @@ module Main where
 
 import Data.List (sort)
 
-
-
-
-
 readInput :: FilePath -> IO [[Int]]
 readInput filename =
      do file <- lines <$> readFile filename
@@ -30,6 +26,5 @@ main = do readInput "example" >>= (print . prob1)
           readInput "input" >>= (print . prob1)
           readInput "example" >>= (print . prob2)
           readInput "input" >>= (print . prob2)
-
 
 
