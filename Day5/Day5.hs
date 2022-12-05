@@ -55,7 +55,9 @@ readInput fn = do f <- lines <$> readFile fn
                       numcs = length base
                       parsed_stacks = map (map (readMaybe @Box)) ccs
                       stacks = replicate numcs ([] :: [Box])
-                  return (IM.fromList $ zip [1..] $ map (reverse . catMaybes) $ transpose parsed_stacks, map (read @Instr) instrs)
+                  return (IM.fromList $ zip [1..] $
+                             map (reverse . catMaybes) $
+                                 transpose parsed_stacks, map (read @Instr) instrs)
 
 type Stacks = IntMap [Box]
 
