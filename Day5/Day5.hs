@@ -1,5 +1,6 @@
 {-# LANGUAGE GHC2021 #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 module Main where
 
 import Text.ParserCombinators.ReadP
@@ -79,9 +80,9 @@ task2 (sts, instrs) = IM.foldr firsts "" $ foldl runInstr sts instrs
          firsts [] sf =  sf
          firsts ((B c):_) sf = c:sf
          runInstr  :: Stacks -> Instr -> Stacks
-         runInstr stacks (I{..}) = (IM.insert source) source' $
-                                    IM.adjust ( mvd ++) dest stacks
-            where (mvd, source') = splitAt num (stacks IM.! source)
+         runInstr stacks (stack) = (IM.insert stack.source) source' $
+                                    IM.adjust ( mvd ++) stack.dest stacks
+            where (mvd, source') = splitAt stack.num (stacks IM.! stack.source)
 
 main :: IO ()
 main = do readInput "example" >>= print . task1
