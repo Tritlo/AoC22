@@ -40,13 +40,11 @@ instance Ord Tree where
 instance Show Tree where
     show (T{..}) = (show c) ++ ":" ++ (show (h, Map.elems s))
 task1 :: [[Int]] -> Int
-task1 = Set.size . Set.unions . map Set.fromList  . map (map fst) . map seen . variations . addCoords
+task1 = Set.size . Set.unions . map Set.fromList
+        . map (map fst) . map seen . variations . addCoords
 
 toTree :: ((Int,Int),Int) -> Tree
-toTree  (c,v) = T {h = v, c = c, s = Map.fromList [('u',0),
-                                                   ('d',0),
-                                                   ('l',0),
-                                                   ('r',0)]}
+toTree  (c,v) = T {h = v, c = c, s = Map.fromList [('u',0), ('d',0), ('l',0), ('r',0)]}
 
 score :: Tree -> [Tree] -> Int
 score t@T{h=v} rest = sc rest
@@ -62,10 +60,9 @@ scores k (t:ts) = t':(scores k ts)
 
 scoreForest :: [[Tree]] -> [[Tree]]
 scoreForest = transpose . map reverse . map (scores 'u')
-                  . map reverse . map (scores 'd')
-                  . transpose
-                  . map reverse . map (scores 'l')
-                  . map reverse . map (scores 'r')
+                        . map reverse . map (scores 'd') . transpose
+                        . map reverse . map (scores 'l')
+                        . map reverse . map (scores 'r')
 
 
 totalScore :: Tree -> Int
