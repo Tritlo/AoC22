@@ -85,5 +85,5 @@ draw cur_p cv vs@((cycle,upd):rest) =
 main :: IO ()
 main = do readInput "input" >>= print . task1
           readInput "example-large" >>= print .  task1
-          readInput "example-large" >>= putStrLn . draw 1 1 . task2
+          readInput "example-large" >>= putStrLn . draw 0 1 . task2
           readInput "input" >>= putStrLn . draw 0 1 . task2
