@@ -1,4 +1,14 @@
-module Util where
+module Util (chunks,
+             module Text.ParserCombinators.ReadP,
+             parsePrec) where
+
+import Text.ParserCombinators.ReadP
+import Text.ParserCombinators.ReadPrec
+import qualified Text.ParserCombinators.ReadPrec as RP
+
+
+parsePrec :: ReadP a -> Int -> ReadS a
+parsePrec parse = readPrec_to_S (RP.lift parse)
 
 chunks :: Int -> [a] -> [[a]]
 chunks 0 _ = []
