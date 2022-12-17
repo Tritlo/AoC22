@@ -6,7 +6,8 @@ module Util ( module Text.ParserCombinators.ReadP,
              mergeRange,
              mergeRanges,
              rangeSize,
-             lineInput
+             lineInput,
+             Range
              ) where
 
 import Text.ParserCombinators.ReadP
@@ -23,11 +24,14 @@ parsePrec parse = readPrec_to_S (RP.lift parse)
 mdist :: (Int, Int) -> (Int,Int) -> Int
 mdist (x_1,x_2) (y_1,y_2) = abs (x_1-y_1) + abs (x_2-y_2)
 
-mergeRange :: (Int,Int) -> (Int,Int) -> Maybe (Int,Int)
+
+type Range = (Int,Int)
+
+mergeRange :: Range -> Range -> Maybe Range
 mergeRange (a,b) (c, d) | c - b <= 1 = Just (a, max b d)
 mergeRange _ _ = Nothing
 
-mergeRanges :: [(Int,Int)] -> [(Int,Int)]
+mergeRanges :: [Range] -> [Range]
 mergeRanges (a:b:rs) =
      case mergeRange a b of
         Just r -> mergeRanges (r:rs)
