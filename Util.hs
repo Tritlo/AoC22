@@ -5,7 +5,8 @@ module Util ( module Text.ParserCombinators.ReadP,
              mdist,
              mergeRange,
              mergeRanges,
-             rangeSize
+             rangeSize,
+             lineInput
              ) where
 
 import Text.ParserCombinators.ReadP
@@ -13,6 +14,8 @@ import Text.ParserCombinators.ReadPrec
 import qualified Text.ParserCombinators.ReadPrec as RP
 import Debug.Trace
 
+lineInput :: Read a => FilePath -> IO [a]
+lineInput = fmap (map read . lines) . readFile
 
 parsePrec :: ReadP a -> Int -> ReadS a
 parsePrec parse = readPrec_to_S (RP.lift parse)
