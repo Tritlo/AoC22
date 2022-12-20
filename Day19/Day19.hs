@@ -6,6 +6,8 @@ module Main where
 import Util
 import Data.List (sortBy)
 import Data.Function (on)
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 
 
@@ -84,20 +86,22 @@ data Action = Pass
             | BuildObs
             | BuildGeo deriving (Eq, Show, Ord, Enum)
 
-takeAction :: Input -> State -> Action -> State
-takeAction bl rs@(RState {..}) BuildOre
+takeAction :: Input -> State -> Int -> Action -> State
+takeAction bl rs@(RState {..}) _ BuildOre
         = rs {factory = (1,0,0,0),
               stocks = stocks `addQuple` (negateQuple bl.or)}
-takeAction bl rs@(RState {..}) BuildClay
+takeAction bl rs@(RState {..}) _ BuildClay
         = rs {factory = (0,1,0,0),
               stocks = stocks `addQuple` (negateQuple bl.cr)}
-takeAction bl rs@(RState {..}) BuildObs
+takeAction bl rs@(RState {..}) _ BuildObs
         = rs {factory = (0,0,1,0),
               stocks = stocks `addQuple` (negateQuple bl.obr)}
-takeAction bl rs@(RState {..}) BuildGeo
-        = rs {factory = (0,0,0,1),
-              stocks = stocks `addQuple` (negateQuple bl.ger)}
-takeAction _ rs Pass = rs
+takeAction bl rs@(RState {..}) t BuildGeo
+        = rs {factory = (0,0,0,0),
+              stocks =  (0,0,0,t-1) `addQuple`
+                        (stocks `addQuple`
+                      (negateQuple bl.ger))}
+takeAction _ rs _ Pass = rs
 
 
 
@@ -132,8 +136,8 @@ exActs = [Pass,
           Pass,
           Pass]
 
-runRound :: Input -> State -> Action -> State
-runRound bl st act = mining $ takeAction bl st act
+runRound :: Input -> State -> Int -> Action -> State
+runRound bl st t act = mining $ takeAction bl st t act
 
 initialState :: State
 initialState = RState {stocks = emptyQuple,
@@ -159,69 +163,26 @@ possibleActions bl st =
         then [BuildGeo] else
         filter (isPayable st.stocks . costOf bl) $ [(Pass :: Action)..]
 
-
-execScript :: Bool -> [Action] -> Input -> State -> State
-execScript verbose acts bl st = foldr (\a st ->
-                        (if verbose then (traceShow (st,a))
-                        else id) runRound bl st a
-                        ) st $ reverse acts
-
-
-exploreSpace :: Int -> Input -> State -> [[Action]]
-exploreSpace 0 _ _ = [[]]
-exploreSpace n bl st = concatMap ta pos
-    where pos = possibleActions bl st
-          ta :: Action -> [[Action]]
-          ta a = map (a:) $ exploreSpace (n-1) bl (runRound bl st a)
-
-eval :: Input -> State -> [Action] -> Int
-eval bl st acts = 1_000_000*fg + 10_000 * fb + 100*fc + fo
-    where final_state = execScript False acts bl st
-          (fo,fc,fb,fg) = final_state.stocks
-
-geos :: Input -> State -> [Action] -> Int
-geos bl st acts = fg
-    where final_state = execScript False acts bl st
-          (fo,fc,fb,fg) = final_state.stocks
-
-prune :: Int -> Input -> State -> [[Action]] -> [[Action]]
-prune n bl st = map snd . take n . reverse . sortBy (compare `on` fst)
-                . map (\acts -> (eval bl st acts, acts))
-
-runAFew :: Int -> Int -> Input -> State -> [[Action]] -> [[Action]]
-runAFew moves after_prune bl st so_far = paths'
-    where pruned = prune after_prune bl st so_far
-          paths' = concatMap (\acts -> map (acts ++) $
-                                exploreSpace moves bl (execScript
-                                False acts bl st)) pruned
-
-exploreMax :: Int -> Input -> State -> Int
-exploreMax 0 _ (RState{stocks = (_,_,_,g)}) = g
-exploreMax n bl st = maximum (map ta pos)
-    where pos = possibleActions bl st
-          ta :: Action -> Int
-          ta a = exploreMax (n-1) bl (runRound bl st a)
-
 task1 :: [Input] -> Int
-task1 = taskN 24
+task1 = sum . zipWith (\res ind -> ind*res) [1..] .  taskN 24
 
 task2 :: [Input] -> Int
-task2 = taskN 32 . take 3
+task2 = product . taskN 32 . take 3
 
-taskN :: Int -> [Input] -> Int
-taskN time inps = sum $ zipWith (\inp ind -> ind*(task1' inp ind)) inps [1..]
+taskN :: Int -> [Input] -> [Int]
+taskN time = map (flip task1' 0)
   where
-    task1' :: Input -> Int  -> Int
+    task1' :: Input -> Int -> Int
     task1' bl ind = go 0
         where (m_o:m_c:m_b:[]) = map (\i -> maximum (map (flip indexQ i)
                                       [bl.or, bl.obr, bl.ger,bl.cr])) [0..2]
               ndfs (n,_) | n >= time = []
-              ndfs (n,st) = map (\p -> (n+1, runRound bl st p)) pos'
+              ndfs (n,st) = map (\p -> (n+1, runRound bl st (time-n) p)) pos'
                   where pos = reverse $ possibleActions bl st
                         pos' = h n st pos
                         h _ _ [] = []
-                        h n st@(RState{stocks=(o,c,b,_),
-                                    robots=(or,cr,br,gr)}) (a:acs)
+                        h n st@(RState{stocks=(o,c,b,g),
+                                    robots=(or,cr,br,_)}) (a:acs)
                                     | BuildOre <- a =
                                         if or >= m_o
                                         || or*t + o >= t* m_o
@@ -230,7 +191,7 @@ taskN time inps = sum $ zipWith (\inp ind -> ind*(task1' inp ind)) inps [1..]
                                     | BuildClay <- a =
                                         if cr >= m_c
                                         || cr*t + c >= t*m_c
-                                        || gr >= 1
+                                        || g >= 1
                                         then rest else (BuildClay:rest)
                                     | BuildObs <- a =
                                         if br >= m_b
@@ -243,7 +204,9 @@ taskN time inps = sum $ zipWith (\inp ind -> ind*(task1' inp ind)) inps [1..]
               go n = case dfs ndfs (0,initialState)
                       (\(_,RState{stocks=(_,_,_,g)}) -> g >= n) of
                           Nothing -> traceShow ("found!", ind, (n-1)) (n-1)
-                          Just _ -> traceShow (ind, n) $ go (n+1)
+                          Just p | (_,RState{stocks=(_,_,_,fg)}) <- last p
+                                    -> traceShow (ind, n, fg) $ go (fg+1)
+
 
 main :: IO ()
 main = do
@@ -252,4 +215,7 @@ main = do
         readInput "Day19/input" >>= print . task1
         readInput "Day19/example" >>= print . task2
         readInput "Day19/input" >>= print . task2
+        -- #1 was 21
+        -- #2 was 7
+        -- #3 was 39
 
