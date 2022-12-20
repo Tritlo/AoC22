@@ -10,7 +10,9 @@ module Util ( module Text.ParserCombinators.ReadP,
              rangeSize,
              lineInput,
              Range,
-             bfs
+             bfs,
+             bfsEndF,
+             dfs
              ) where
 
 import Text.ParserCombinators.ReadP
@@ -59,10 +61,13 @@ chunks n xs | length xs <= n = [xs]
 
 
 bfs :: Ord a => (a -> [a]) -> a -> a -> Maybe [a]
-bfs neighbors start end = bfs' Set.empty Map.empty [start]
+bfs n s e = bfsEndF n s (\q -> EQ == (compare e q))
+
+bfsEndF :: Ord a => (a -> [a]) -> a -> (a -> Bool) -> Maybe [a]
+bfsEndF neighbors start endF = bfs' Set.empty Map.empty [start]
   where prioritize (q:qs) = (q,qs) -- standard bfs
         bfs' _ p [] = Nothing
-        bfs' _ parents queue | q == end = Just $ reverse (recPath end)
+        bfs' _ parents queue | (endF q)  = Just $ reverse (recPath q)
           where (q,qs) = prioritize queue
                 recPath c_n | c_n == start = [start]
                 recPath c_n =  c_n:(recPath (parents Map.! c_n))
@@ -72,3 +77,21 @@ bfs neighbors start end = bfs' Set.empty Map.empty [start]
                         neighbors q
                   ps' = Map.union ps (Map.fromList $ zip ns (repeat q))
                   seen' = Set.union seen $ Set.fromList ns
+
+dfs :: Ord a => (a -> [a]) -> a -> (a -> Bool) -> Maybe [a]
+dfs neighbors start endF = case dfs' Set.empty start of
+                              Left _ -> Nothing
+                              Right as -> Just as
+  where ns = neighbors start
+        work seen [] = Left seen
+        work seen (a:as) =
+             case dfs' (Set.insert a seen) a of
+                  Left seen' -> work seen' as
+                  Right as' -> Right (a:as')
+        dfs' seen cur =
+            case filter (not . flip Set.member seen) $ neighbors cur of
+                  [] -> Left seen
+                  (a:_)  | endF a -> Right [a]
+                  as -> work seen as
+
+
